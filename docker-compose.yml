@@ -1,0 +1,39 @@
+services:
+  garage:
+    image: dxflrs/garage:${GARAGE_VERSION}
+    container_name: kubo-garage
+    restart: unless-stopped
+    environment:
+      # I segreti restano fuori da garage.toml: Garage li legge da queste variabili
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+    ports:
+      # Per default solo in locale; per esporli cambia GARAGE_BIND_ADDRESS nel .env
+      - "${GARAGE_BIND_ADDRESS}:${GARAGE_S3_PORT}:3900"   # S3 API
+      - "${GARAGE_BIND_ADDRESS}:${GARAGE_ADMIN_PORT}:3903" # Admin API
+
+  garage-webui:
+    image: khairul169/garage-webui:${GARAGE_WEBUI_VERSION}
+    container_name: kubo-garage-webui
+    restart: unless-stopped
+    depends_on:
+      - garage
+    environment:
+      API_BASE_URL: http://garage:3903
+      API_ADMIN_KEY: ${GARAGE_ADMIN_TOKEN}
+      S3_ENDPOINT_URL: http://garage:3900
+      S3_REGION: ${GARAGE_S3_REGION}
+      # Login opzionale: "utente:hash-bcrypt" (htpasswd -nbBC 10 "utente" "password")
+      AUTH_USER_PASS: ${GARAGE_WEBUI_AUTH_USER_PASS:-}
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+    ports:
+      - "${GARAGE_BIND_ADDRESS}:${GARAGE_WEBUI_PORT}:3909"
+
+volumes:
+  garage-meta:
+  garage-data:

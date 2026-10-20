@@ -1,0 +1,49 @@
+# Configurazione di Garage: da completare.
+# Doc di riferimento: https://garagehq.deuxfleurs.fr/documentation/reference-manual/configuration/
+#
+# Il compose monta questo file in /etc/garage.toml e le cartelle dati in:
+#   /var/lib/garage/meta  (metadati)
+#   /var/lib/garage/data  (blocchi degli oggetti)
+#
+# NON mettere qui rpc_secret e admin_token: arrivano dal .env come variabili
+# d'ambiente (GARAGE_RPC_SECRET, GARAGE_ADMIN_TOKEN), così il file si può versionare.
+
+#Qui Garage tiene i metadati, cioè l'elenco di bucket, chiavi e oggetti, le chiavi di cartella e le versioni. È un piccolo database. Nel compose questo percorso è il volume garage-meta.
+metadata_dir = "/var/lib/garage/meta"
+
+#Qui Garage salva i blocchi di dati veri e propri dei file (divisi in pezzi). Nel compose è il volume garage-data.
+data_dir = "/var/lib/garage/data"
+
+# Motore del DB dei metadati:
+# - "lmdb": più veloce ed è la scelta classica, ma il file è legato all'architettura della macchina e un crash improvviso può corrompere il database.
+# - "sqlite": più lento, ma più robusto in caso di spegnimenti bruschi e portabile.
+db_engine = "lmdb"
+
+# Quante copie dei dati. Con un solo nodo può essere solo 1 (nessuna ridondanza).
+replication_factor = 1
+
+# Indirizzo su cui ascolta l'RPC tra nodi (porta di default 3901)
+rpc_bind_addr = "[::]:3901"
+# Indirizzo con cui gli altri nodi ti raggiungono (con un nodo solo è comunque richiesto)
+rpc_public_addr = "127.0.0.1:3901"
+
+[s3_api]
+
+#la region che Garage dichiara. È usata nel calcolo della firma delle richieste (SigV4), quindi il client S3 deve usare lo stesso valore. 
+#Deve coincidere con GARAGE_S3_REGION nel .env, che lo passa alla web UI. Nel client Java imposti la stessa region.
+s3_region = "garage"
+
+# Indirizzo e porta dell'API S3. Dentro il container deve ascoltare su tutte le interfacce, altrimenti la porta mappata dal compose non arriva a Garage.
+api_bind_addr = "[::]:3900"
+
+# root_domain = ".s3.garage.localhost"   # solo se vuoi lo stile virtual-host
+
+
+
+# [s3_web]            # hosting di siti statici da un bucket: probabilmente non ti serve
+# bind_addr =
+# root_domain =
+
+[admin]
+# Dentro il container deve ascoltare su tutte le interfacce, altrimenti la web UI non arriva
+api_bind_addr = "[::]:3903"
