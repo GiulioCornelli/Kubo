@@ -75,5 +75,4 @@ Dato che condividono il database, decidi chi possiede le migrazioni. Se le esegu
 Storage-Service
 - spring-boot-starter-web
 - spring-boot-starter-oauth2-resource-server
-- Client S3, a scelta:
-software.amazon.awssdk:s3 (AWS SDK v2, con software.amazon.awssdk:bom): include S3Presigner per le presigned URL. È la mia scelta, perché funziona con qualsiasi backend S3-compatibile (MinIO, SeaweedFS, Garage)
+- software.amazon.awssdk:s3 (AWS SDK v2, con software.amazon.awssdk:bom): include S3Presigner per le presigned URL. È la mia scelta, perché funziona con qualsiasi backend S3-compatibile (MinIO, SeaweedFS, Garage)
