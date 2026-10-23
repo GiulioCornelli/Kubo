@@ -85,3 +85,6 @@ volumes/
 
 # Claude Code
 .claude/
+
+#Prove
+prova.sh

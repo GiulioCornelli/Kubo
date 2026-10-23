@@ -77,5 +77,3 @@ Storage-Service
 - spring-boot-starter-oauth2-resource-server
 - Client S3, a scelta:
 software.amazon.awssdk:s3 (AWS SDK v2, con software.amazon.awssdk:bom): include S3Presigner per le presigned URL. È la mia scelta, perché funziona con qualsiasi backend S3-compatibile (MinIO, SeaweedFS, Garage)
-io.minio:minio: SDK ufficiale di MinIO, più semplice ma legato a MinIO
-Se vuoi gestire le notifiche di MinIO (ObjectCreated) via webhook non ti serve altro che un controller. Via broker aggiungi spring-boot-starter-amqp
