@@ -2,7 +2,7 @@ services:
   garage:
     image: dxflrs/garage:${GARAGE_VERSION}
     container_name: kubo-garage
-    restart: unless-stopped
+    # restart: unless-stopped
     environment:
       # I segreti restano fuori da garage.toml: Garage li legge da queste variabili
       GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
@@ -19,7 +19,7 @@ services:
   garage-webui:
     image: khairul169/garage-webui:${GARAGE_WEBUI_VERSION}
     container_name: kubo-garage-webui
-    restart: unless-stopped
+    # restart: unless-stopped
     depends_on:
       - garage
     environment:
