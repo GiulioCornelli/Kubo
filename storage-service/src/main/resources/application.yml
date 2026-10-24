@@ -4,6 +4,12 @@ spring.application.name: storage-service
 server:
   port: 9010
 
+spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
 kubo:
   s3:
     endpoint: ${GARAGE_ENDPOINT:http://127.0.0.1:3900}
