@@ -5,10 +5,14 @@ server:
   port: 9010
 
 spring:
+  
   servlet:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
+  
+  config:
+    import: optional:file:.env[.properties] #permette di leggere i file .env
 
 kubo:
   s3:
