@@ -32,7 +32,7 @@ public class StorageController {
     public ResponseEntity<String> upload(@RequestParam("file") MultipartFile file) throws IOException {
         String key = UUID.randomUUID().toString();
         storageService.uploadFile(key, file);
-        return ResponseEntity.ok(key);
+        return ResponseEntity.ok("file is added key:"+key);
     }
 
     @GetMapping("/download/{key}")
