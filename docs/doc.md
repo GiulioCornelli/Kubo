@@ -58,6 +58,7 @@ mapstruct + mapstruct-processor: mapping entity ↔ DTO. Se usi anche Lombok, ag
 spring-boot-starter-amqp: per consumare gli eventi utente e aggiornare la copia locale di users
 Per chiamare Storage e Permis non serve nulla di extra: Spring ha già RestClient e le interfacce dichiarative @HttpExchange. spring-cloud-starter-openfeign è l'alternativa classica
 resilience4j-spring-boot3: opzionale, retry e timeout per le chiamate tra servizi
+
 Permis-Service
 
 Lo stack è quasi identico a Meta, visto che condividono il DB:
