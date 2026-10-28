@@ -22,3 +22,4 @@ kubo:
     bucket: ${GARAGE_BUCKET:prova}
     access-key: ${GARAGE_ACCESS_KEY_ID}
     secret-key: ${GARAGE_SECRET_ACCESS_KEY}
+    presign-ttl: ${PRESIGN_TTL}

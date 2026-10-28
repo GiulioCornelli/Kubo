@@ -45,7 +45,7 @@ public class StorageService {
 
 
     // ----------------- Presigner URL -----------------
-    public String presingUpload(String key, Duration ttl){
+    public String presignUpload(String key, Duration ttl){
         PutObjectRequest putRequest = PutObjectRequest.builder()
             .bucket(props.bucket())
             .key(key)
@@ -59,7 +59,7 @@ public class StorageService {
         return s3Presigner.presignPutObject(presignRequest).url().toString();
     }
 
-    public String presingDownload(String key, Duration ttl){
+    public String presignDownload(String key, Duration ttl){
         GetObjectRequest getRequest = GetObjectRequest.builder()
                 .bucket(props.bucket())
                 .key(key)
