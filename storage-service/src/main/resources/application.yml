@@ -17,9 +17,10 @@ spring:
 
 kubo:
   s3:
-    endpoint: ${GARAGE_ENDPOINT:http://127.0.0.1:3900}
-    region: ${GARAGE_S3_REGION:garage}
-    bucket: ${GARAGE_BUCKET:prova}
+    endpoint: ${GARAGE_ENDPOINT}
+    public-endpoint: ${GARAGE_PUBLIC_ENDPOINT:}
+    region: ${GARAGE_S3_REGION}
+    bucket: ${GARAGE_BUCKET}
     access-key: ${GARAGE_ACCESS_KEY_ID}
     secret-key: ${GARAGE_SECRET_ACCESS_KEY}
     presign-ttl: ${PRESIGN_TTL}

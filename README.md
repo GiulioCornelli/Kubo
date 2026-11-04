@@ -13,6 +13,7 @@ Si occupa di leggere e scrivere i file nel bucket. Non gestisce utenti né perme
   - generazione di presigned URL per upload e download, con cui il client trasferisce i file direttamente da e verso il bucket (`/api/presign`);
   - upload e download diretti, che fanno passare i byte dal servizio (`/api`).
 - **Configurazione:** copia `storage-service/.env.example` in `storage-service/.env` e compila i valori.
+- **Endpoint interno e pubblico:** `GARAGE_ENDPOINT` è l'indirizzo con cui il servizio parla con Garage; `GARAGE_PUBLIC_ENDPOINT` è quello con cui il client lo raggiunge e finisce negli URL firmati (l'host fa parte della firma). Se vuoto, vale `GARAGE_ENDPOINT`.
 
 #### Dipendenze
 

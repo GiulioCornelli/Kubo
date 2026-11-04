@@ -1,7 +1,6 @@
 package kubo.storage.controller;
 
 import java.time.Duration;
-import java.util.UUID;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,11 +23,10 @@ public class PresignController {
     private final StorageService storageService;
 
     @PostMapping("/upload")
-    public PresignResponse upload() {
+    public PresignResponse upload(@RequestBody PresignRequest request) {
         Duration ttl = props.presignTtl();
-        String key = UUID.randomUUID().toString();
-        String url = storageService.presignUpload(key, ttl);
-        return new PresignResponse(key, url, ttl.toSeconds());
+        String url = storageService.presignUpload(request.key(), ttl);
+        return new PresignResponse(request.key(), url, ttl.toSeconds());
     }
 
     @PostMapping("/download")
