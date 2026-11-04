@@ -3,6 +3,7 @@ package kubo.storage.service;
 import java.io.IOException;
 import java.time.Duration;
 
+import kubo.storage.dto.ObjectInfoResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -11,9 +12,7 @@ import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
@@ -71,5 +70,15 @@ public class StorageService {
                 .build();
 
         return s3Presigner.presignGetObject(presignRequest).url().toString();
+    }
+
+    // ----------------- Check -----------------
+    public ObjectInfoResponse head(String key){
+        HeadObjectResponse resp = s3Client.headObject(HeadObjectRequest.builder()
+                .bucket(props.bucket())
+                .key(key)
+                .build());
+
+        return new ObjectInfoResponse(key, resp.contentLength(), resp.contentType());
     }
 }
