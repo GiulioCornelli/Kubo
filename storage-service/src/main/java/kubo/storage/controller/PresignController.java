@@ -11,6 +11,7 @@ import kubo.storage.config.S3Properties;
 import kubo.storage.dto.PresignRequest;
 import kubo.storage.dto.PresignResponse;
 import kubo.storage.service.StorageService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 
@@ -23,14 +24,14 @@ public class PresignController {
     private final StorageService storageService;
 
     @PostMapping("/upload")
-    public PresignResponse upload(@RequestBody PresignRequest request) {
+    public PresignResponse upload(@Valid @RequestBody PresignRequest request) {
         Duration ttl = props.presignTtl();
         String url = storageService.presignUpload(request.key(), ttl);
         return new PresignResponse(request.key(), url, ttl.toSeconds());
     }
 
     @PostMapping("/download")
-    public PresignResponse download(@RequestBody PresignRequest request) {
+    public PresignResponse download(@Valid @RequestBody PresignRequest request) {
         Duration ttl = props.presignTtl();
         String url = storageService.presignDownload(request.key(), ttl);
         return new PresignResponse(request.key(), url, ttl.toSeconds());

@@ -1,5 +1,7 @@
 package kubo.storage.dto;
 
-public record PresignRequest(String key) {
+import kubo.storage.validation.ValidKey;
+
+public record PresignRequest(@ValidKey String key) {
 
 }

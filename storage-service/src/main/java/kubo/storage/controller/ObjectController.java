@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import kubo.storage.dto.ObjectInfoResponse;
 import kubo.storage.service.StorageService;
+import kubo.storage.validation.ValidKey;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -17,7 +18,7 @@ public class ObjectController {
     private final StorageService storageService;
 
     @GetMapping("/{key}")
-    public ObjectInfoResponse info(@PathVariable String key) {
+    public ObjectInfoResponse info(@PathVariable @ValidKey String key) {
         return storageService.head(key);
     }
 }
