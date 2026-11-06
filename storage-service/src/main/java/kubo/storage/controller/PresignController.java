@@ -36,6 +36,13 @@ public class PresignController {
         String url = storageService.presignDownload(request.key(), ttl);
         return new PresignResponse(request.key(), url, ttl.toSeconds());
     }
+
+    @PostMapping("/delete")
+    public PresignResponse delete(@Valid @RequestBody PresignRequest request) {
+        Duration ttl = props.presignTtl();
+        String url = storageService.presignDelete(request.key(), ttl);
+        return new PresignResponse(request.key(), url, ttl.toSeconds());
+    }
     
 
 }

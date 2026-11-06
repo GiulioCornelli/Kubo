@@ -14,6 +14,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.DeleteObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
@@ -70,6 +71,20 @@ public class StorageService {
                 .build();
 
         return s3Presigner.presignGetObject(presignRequest).url().toString();
+    }
+
+    public String presignDelete(String key, Duration ttl){
+        DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                .bucket(props.bucket())
+                .key(key)
+                .build();
+
+        DeleteObjectPresignRequest presignRequest = DeleteObjectPresignRequest.builder()
+                .signatureDuration(ttl)
+                .deleteObjectRequest(deleteRequest)
+                .build();
+
+        return s3Presigner.presignDeleteObject(presignRequest).url().toString();
     }
 
     // ----------------- Check -----------------
