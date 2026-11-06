@@ -3,22 +3,77 @@
 Clone opensouce di google drive, per aumentare le mi skill di java.
 
 
+### Architettura
+
+```mermaid
+flowchart LR
+    Client["Client<br/>(web app)"]
+
+    subgraph IDP["Provider di identità del cliente"]
+        EXT["Entra ID / Active Directory<br/>Google / altri"]
+    end
+
+    subgraph Edge["Ingresso"]
+        GW["API Gateway<br/>(Spring Cloud Gateway)"]
+    end
+
+    subgraph Identity["Identità"]
+        KC["Keycloak<br/>(identity broker)"]
+        KCDB[("Keycloak DB<br/>PostgreSQL")]
+    end
+
+    subgraph Services["Servizi interni (rete privata)"]
+        META["Metadata service<br/>file, cartelle, utenti, permessi"]
+        ADMIN["Admin service<br/>(da definire)"]
+        STORAGE["Storage service"]
+    end
+
+    subgraph Data["Dati"]
+        METADB[("Metadata DB<br/>PostgreSQL")]
+        GARAGE[("Garage<br/>bucket S3")]
+    end
+
+    Client -- "login OIDC (Authorization Code + PKCE)" --> KC
+    KC -- "federazione OIDC / SAML / LDAP" --> EXT
+    KC --> KCDB
+
+    Client -- "API REST + JWT" --> GW
+    GW -. "chiavi pubbliche (JWKS)" .-> KC
+    GW -- "/files, /folders" --> META
+    GW -- "/admin" --> ADMIN
+
+    META -. "valida JWT (JWKS)" .-> KC
+    ADMIN -. "valida JWT (JWKS)" .-> KC
+
+    META --> METADB
+    META -- "presign, head" --> STORAGE
+    ADMIN -- "endpoint admin" --> META
+    ADMIN -- "upload/download diretti" --> STORAGE
+
+    STORAGE -- "AWS SDK v2 (S3)" --> GARAGE
+    Client == "upload/download con presigned URL" ==> GARAGE
+```
+
+Linee tratteggiate: validazione dei token (i servizi scaricano le chiavi pubbliche di Keycloak una volta e poi validano da soli). Linea spessa: i byte dei file vanno dal client a Garage senza passare da gateway né da servizi. Lo Storage non ha rotta nel gateway.
+
 Suddivizione dei Microservizi:
 
 1. API Gateway (Spring Cloud Gateway)
 È l'unico punto d'ingresso per il client. Instrada le richieste verso il servizio giusto, verifica il JWT, gestisce CORS e rate limiting. Non ha logica di business e non ha database.
 
-2. Auth service
-Gestisce registrazione e login ed emette i JWT. Possiede la tabella users. Gli altri servizi non chiamano questo servizio a ogni richiesta: validano il JWT da soli (Spring Security come resource server) e leggono lo user_id dal claim sub. Se usi Keycloak, questo servizio praticamente sparisce e ti resta al massimo un piccolo servizio per il profilo utente.
+2. Keycloak (identità)
+Non è un servizio scritto da noi: è un container che gestisce login ed emette i JWT, al posto di un Auth service. Fa da identity broker: il cliente collega i propri provider (Microsoft Entra ID / Active Directory via OIDC, SAML o LDAP, Google, ...) e Keycloak li presenta ai nostri servizi come un unico issuer, con claim uniformi. Gli altri servizi non lo chiamano a ogni richiesta: validano il JWT da soli (Spring Security come resource server, con un solo issuer-uri) e leggono l'identità dai claim sub e iss. Il ruolo di amministratore (es. kubo-admin) è definito in Keycloak, anche a partire dai gruppi dell'AD, e arriva nel token.
 
 3. Metadata service
 È il cuore del sistema. Possiede la tabella files (e le cartelle, quando le aggiungi): crea, rinomina, sposta, cestina, elenca il contenuto di una cartella. Non tocca mai i byte dei file, gestisce solo i metadati. A ogni operazione deve chiedersi "questo utente può farla su questo file?".
+Possiede anche la tabella users, una copia locale creata al primo accesso dal token: UUID interno, issuer ed external_id (univoci insieme, perché lo stesso id può ripetersi tra provider diversi), nome, email. File, cartelle e permessi puntano all'UUID interno, mai all'id del provider.
+Gestisce anche i permessi (tabella permissions): condivide un file con un utente, assegna un ruolo, revoca, e risolve l'ereditarietà dei permessi dalle cartelle ai file contenuti. Sono due pacchetti separati nello stesso servizio (files e permissions), perché i permessi dipendono dalla gerarchia delle cartelle, che sta qui.
 
-4. Permission service
-Possiede la tabella permissions. Condivide un file con un utente, assegna un ruolo, revoca. Espone soprattutto un endpoint di controllo, tipo GET /permissions/check?fileId=...&userId=...&action=READ, che il File service chiama prima di agire. Qui c'è la parte difficile: l'ereditarietà dei permessi dalle cartelle ai file contenuti.
+4. Admin service
+(da definire) Dashboard per gestire i file indipendentemente da chi li ha creati. Non gestisce gli utenti, che restano in Keycloak e nel provider del cliente.
 
 5. Storage service
-È l'unico che conosce MinIO. Genera le presigned URL (anche multipart per i file grandi) e, se vuoi, riceve le notifiche di MinIO quando un upload è terminato. Isolarlo ti permette di cambiare backend (MinIO, SeaweedFS, S3) toccando un solo servizio.
+È l'unico che conosce Garage. Genera le presigned URL (anche multipart per i file grandi) e conferma gli upload con una HEAD sull'oggetto (dimensione e content-type), chiamata dal Metadata, perché Garage non ha notifiche degli eventi. Non ha utenti né permessi ed è raggiungibile solo dal Metadata (e dall'Admin), mai dal gateway. Isolarlo tiene in un solo servizio le credenziali del bucket e tutto ciò che riguarda lo storage.
 
 
 ### Scheam ER
@@ -36,17 +91,8 @@ API Gateway
 
 Niente database, niente JPA. Il gateway è reattivo (WebFlux), quindi non mischiare spring-boot-starter-web.
 
-Auth-Service
-- spring-boot-starter-web
-- spring-boot-starter-security
-- spring-boot-starter-oauth2-resource-server: porta con sé Nimbus (NimbusJwtEncoder), che ti serve per firmare i JWT. Firma con chiave RSA e pubblica il JWKS, così gli altri servizi validano senza condividere segreti
-- spring-boot-starter-data-jpa
-- postgresql (driver)
-flyway-core + flyway-database-postgresql
-Per l'hash delle password usi BCryptPasswordEncoder, già incluso in Spring Security (per Argon2 serve anche bcprov-jdk18on)
-spring-boot-starter-amqp: se pubblichi gli eventi UserRegistered su RabbitMQ (con la tabella outbox)
-
-In alternativa a tutto questo: Keycloak come container e nei servizi solo il resource server. Per un progetto di studio scrivere Auth a mano è più istruttivo. Esiste anche spring-boot-starter-oauth2-authorization-server, ma è più complesso del necessario per il tuo caso.
+Keycloak
+Nessuna libreria: è un container (immagine quay.io/keycloak/keycloak, con un database proprio). Gateway, Metadata, Admin e Storage (se serve) sono solo resource server, con un solo issuer-uri che punta al realm di Keycloak.
 
 Meta-Service
 spring-boot-starter-web
@@ -55,23 +101,11 @@ spring-boot-starter-data-jpa
 postgresql
 flyway-core + flyway-database-postgresql
 mapstruct + mapstruct-processor: mapping entity ↔ DTO. Se usi anche Lombok, aggiungi lombok-mapstruct-binding
-spring-boot-starter-amqp: per consumare gli eventi utente e aggiornare la copia locale di users
-Per chiamare Storage e Permis non serve nulla di extra: Spring ha già RestClient e le interfacce dichiarative @HttpExchange. spring-cloud-starter-openfeign è l'alternativa classica
+Per chiamare Storage non serve nulla di extra: Spring ha già RestClient e le interfacce dichiarative @HttpExchange. spring-cloud-starter-openfeign è l'alternativa classica
 resilience4j-spring-boot3: opzionale, retry e timeout per le chiamate tra servizi
 
-Permis-Service
-
-Lo stack è quasi identico a Meta, visto che condividono il DB:
-
-spring-boot-starter-web
-spring-boot-starter-oauth2-resource-server
-spring-boot-starter-data-jpa
-postgresql
-flyway-core + flyway-database-postgresql
-mapstruct (+ processor)
-spring-boot-starter-amqp: per reagire a FileDeleted e simili
-
-Dato che condividono il database, decidi chi possiede le migrazioni. Se le eseguono entrambi, dai a ciascuno una tabella di storico diversa con spring.flyway.table, altrimenti si pestano i piedi.
+Admin-Service
+(da definire)
 
 Storage-Service
 - spring-boot-starter-web
