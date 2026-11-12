@@ -2,7 +2,73 @@
 
 Kubo è un clone open source di Google Drive, realizzato in Java con un'architettura a microservizi per archiviare, organizzare e condividere file.
 
+## Architettura
+
+```mermaid
+flowchart LR
+    Client["Client<br/>(web app)"]
+
+    subgraph IDP["Provider di identità del cliente"]
+        EXT["Entra ID / Active Directory<br/>Google / altri"]
+    end
+
+    subgraph Edge["Ingresso"]
+        GW["API Gateway<br/>(Spring Cloud Gateway)"]
+    end
+
+    subgraph Identity["Identità"]
+        KC["Keycloak<br/>(identity broker)"]
+        KCDB[("Keycloak DB<br/>PostgreSQL")]
+    end
+
+    subgraph Services["Servizi interni (rete privata)"]
+        META["Metadata service<br/>file, cartelle, utenti, permessi"]
+        ADMIN["Admin service<br/>(da definire)"]
+        STORAGE["Storage service"]
+    end
+
+    subgraph Data["Dati"]
+        METADB[("Metadata DB<br/>PostgreSQL")]
+        GARAGE[("Garage<br/>bucket S3")]
+    end
+
+    Client -- "login OIDC (Authorization Code + PKCE)" --> KC
+    KC -- "federazione OIDC / SAML / LDAP" --> EXT
+    KC --> KCDB
+
+    Client -- "API REST + JWT" --> GW
+    GW -. "chiavi pubbliche (JWKS)" .-> KC
+    GW -- "/files, /folders" --> META
+    GW -- "/admin" --> ADMIN
+
+    META -. "valida JWT (JWKS)" .-> KC
+    ADMIN -. "valida JWT (JWKS)" .-> KC
+
+    META --> METADB
+    META -- "presign, head" --> STORAGE
+    ADMIN -- "endpoint admin" --> META
+    ADMIN -- "upload/download diretti" --> STORAGE
+
+    STORAGE -- "AWS SDK v2 (S3)" --> GARAGE
+    Client == "upload/download con presigned URL" ==> GARAGE
+```
+
+Linee tratteggiate: validazione dei token (i servizi scaricano una volta le chiavi pubbliche di Keycloak e poi validano da soli). Linea spessa: i byte dei file vanno dal client a Garage senza passare da gateway né da servizi. Lo Storage non ha rotta nel gateway ed è raggiungibile solo dai servizi interni.
+
 ## Microservizi
+
+Stato: per ora è realizzato solo lo `storage-service`; gli altri sono progettati.
+
+| Servizio | Ruolo | Stato |
+|---|---|---|
+| **API Gateway** (Spring Cloud Gateway) | Unico punto d'ingresso per il client: instrada le richieste, verifica il JWT, gestisce CORS e rate limiting. Senza logica di business e senza database. | Previsto |
+| **Keycloak** (identità) | Non è codice nostro: è un container che gestisce il login ed emette i JWT, al posto di un Auth service. Fa da identity broker verso Microsoft Entra ID / Active Directory, Google e altri, che i servizi vedono come un unico issuer. Il ruolo di amministratore (es. `kubo-admin`) è definito qui. | Previsto |
+| **Metadata service** | Il cuore del sistema: file, cartelle, utenti (copia locale creata al primo accesso dal token) e permessi con ereditarietà dalle cartelle. Non tocca mai i byte dei file. Controlla "questo utente può farlo?" a ogni operazione. | Previsto |
+| **Admin service** | Dashboard per gestire i file indipendentemente da chi li ha creati. Non gestisce gli utenti, che restano in Keycloak e nel provider del cliente. | Da definire |
+| **Storage service** | L'unico che conosce Garage: presigned URL (anche multipart per i file grandi), conferma degli upload con una HEAD, pulizia dei multipart abbandonati. Senza utenti né permessi, raggiungibile solo dai servizi interni. | Realizzato |
+
+
+---
 
 ### storage-service
 
