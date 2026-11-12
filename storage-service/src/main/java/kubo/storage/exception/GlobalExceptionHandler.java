@@ -28,6 +28,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<String> invalidBody(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .map(FieldError::getField)
+                .distinct()
                 .collect(Collectors.joining(", ", "Invalid fields: ", ""));
         return ResponseEntity.badRequest().body(message);
     }

@@ -2,11 +2,14 @@ package kubo.storage.service;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import kubo.storage.dto.MultipartPlanResponse;
 import kubo.storage.dto.ObjectInfoResponse;
 import kubo.storage.dto.PartInfo;
+import kubo.storage.dto.UploadPresignResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +22,7 @@ import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.DeleteObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.UploadPartPresignRequest;
 
@@ -55,18 +59,30 @@ public class StorageService {
 
 
     // ----------------- Presigner URL -----------------
-    public String presignUpload(String key, Duration ttl){
+    public UploadPresignResponse presignUpload(String key, long size, String contentType, Duration ttl){
         PutObjectRequest putRequest = PutObjectRequest.builder()
             .bucket(props.bucket())
             .key(key)
+            .contentLength(size)
+            .contentType(contentType)
             .build();
         
         PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
                 .signatureDuration(ttl)
                 .putObjectRequest(putRequest)
                 .build();
-        
-        return s3Presigner.presignPutObject(presignRequest).url().toString();
+
+        PresignedPutObjectRequest presigned = s3Presigner.presignPutObject(presignRequest);
+
+        // header firmati da inviare nel PUT (host lo imposta il client HTTP)
+        Map<String, String> headers = new LinkedHashMap<>();
+        presigned.signedHeaders().forEach((name, values) -> {
+            if (!name.equalsIgnoreCase("host")) {
+                headers.put(name, String.join(",", values));
+            }
+        });
+
+        return new UploadPresignResponse(key, presigned.url().toString(), ttl.toSeconds(), headers);
     }
 
     public String presignDownload(String key, Duration ttl){

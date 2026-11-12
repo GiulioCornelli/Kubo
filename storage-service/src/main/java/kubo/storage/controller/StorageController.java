@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import kubo.storage.service.StorageService;
+import kubo.storage.validation.ValidKey;
 import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
@@ -36,7 +37,7 @@ public class StorageController {
     }
 
     @GetMapping("/download/{key}")
-    public ResponseEntity<InputStreamResource> download(@PathVariable String key, @RequestParam(defaultValue = "download") String filename) {
+    public ResponseEntity<InputStreamResource> download(@PathVariable @ValidKey String key, @RequestParam(defaultValue = "download") String filename) {
         ResponseInputStream<GetObjectResponse> object = storageService.downloadFile(key);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)

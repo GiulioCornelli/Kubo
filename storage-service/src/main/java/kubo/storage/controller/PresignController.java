@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 import kubo.storage.config.S3Properties;
 import kubo.storage.dto.PresignRequest;
 import kubo.storage.dto.PresignResponse;
+import kubo.storage.dto.UploadPresignRequest;
+import kubo.storage.dto.UploadPresignResponse;
 import kubo.storage.service.StorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +26,8 @@ public class PresignController {
     private final StorageService storageService;
 
     @PostMapping("/upload")
-    public PresignResponse upload(@Valid @RequestBody PresignRequest request) {
-        Duration ttl = props.presignTtl();
-        String url = storageService.presignUpload(request.key(), ttl);
-        return new PresignResponse(request.key(), url, ttl.toSeconds());
+    public UploadPresignResponse upload(@Valid @RequestBody UploadPresignRequest request) {
+        return storageService.presignUpload(request.key(), request.size(), request.contentType(), props.presignTtl());
     }
 
     @PostMapping("/download")
