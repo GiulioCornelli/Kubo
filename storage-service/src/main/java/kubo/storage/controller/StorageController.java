@@ -8,6 +8,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,6 +46,12 @@ public class StorageController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename(filename).build().toString())
                 .body(new InputStreamResource(object));
+    }
+
+    @DeleteMapping("/delete/{key}")
+    public ResponseEntity<Void> delete(@PathVariable @ValidKey String key) {
+        storageService.deleteFile(key);
+        return ResponseEntity.noContent().build();
     }
 
 }

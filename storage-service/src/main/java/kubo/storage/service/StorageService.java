@@ -60,6 +60,13 @@ public class StorageService {
                 .build());
     }
 
+    public void deleteFile(String key){
+        s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(props.bucket())
+                .key(key)
+                .build());
+    }
+
 
     // ----------------- Presigner URL -----------------
     public UploadPresignResponse presignUpload(String key, long size, String contentType, Duration ttl){
