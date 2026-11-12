@@ -4,6 +4,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -29,6 +30,12 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getField)
                 .collect(Collectors.joining(", ", "Invalid fields: ", ""));
         return ResponseEntity.badRequest().body(message);
+    }
+
+    // Body assente, JSON malformato, campo primitivo mancante (es. size, partNumber)
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<String> unreadableBody(HttpMessageNotReadableException e) {
+        return ResponseEntity.badRequest().body("Malformed request body");
     }
 
     // Parametro (es. @PathVariable) non valido
