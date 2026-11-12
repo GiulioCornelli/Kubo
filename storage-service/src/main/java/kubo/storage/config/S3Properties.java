@@ -12,7 +12,8 @@ public record S3Properties(
         String bucket,
         String accessKey,
         String secretKey,
-        Duration presignTtl) {
+        Duration presignTtl,
+        Duration multipartMaxAge) {
 
     public S3Properties{
         if (publicEndpoint == null || publicEndpoint.isBlank())publicEndpoint = endpoint;

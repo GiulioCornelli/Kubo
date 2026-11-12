@@ -2,6 +2,7 @@ package kubo.storage.service;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import kubo.storage.config.S3Properties;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -27,6 +29,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 import software.amazon.awssdk.services.s3.presigner.model.UploadPartPresignRequest;
 
 @Service 
+@Slf4j
 @RequiredArgsConstructor 
 public class StorageService {
 
@@ -180,6 +183,27 @@ public class StorageService {
                 .key(key)
                 .uploadId(uploadId)
                 .build());
+    }
+
+    public int abortStaleMultipartUploads(Duration maxAge){
+        Instant limit = Instant.now().minus(maxAge);
+        int aborted = 0;
+
+        ListMultipartUploadsRequest request = ListMultipartUploadsRequest.builder()
+                .bucket(props.bucket())
+                .build();
+
+        for (MultipartUpload upload : s3Client.listMultipartUploadsPaginator(request).uploads()) {
+            if (upload.initiated().isBefore(limit)) {
+                try {
+                    abortMultipart(upload.key(), upload.uploadId());
+                    aborted++;
+                } catch (S3Exception e) {
+                    log.warn("Cannot abort multipart upload {} ({}): {}", upload.key(), upload.uploadId(), e.getMessage());
+                }
+            }
+        }
+        return aborted;
     }
 
 
